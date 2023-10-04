@@ -1,0 +1,39 @@
+version: "3.7"
+networks:
+  overlay:
+    name: "b2b"
+    external: true
+
+x-network: &network-common
+  networks:
+    overlay:
+
+services:
+  app:
+    <<: *network-common
+    image: $CLOUD_REGISTRY_IMAGE_APP:$TAG
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.server_type == ${CI_ENVIRONMENT_SLUG}
+      resources:
+        limits:
+          memory: 1024M
+      update_config:
+        parallelism: 1
+        delay: 5s
+        monitor: 15s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+    healthcheck:
+      test: "wget -q -Y off http://127.0.0.1 -O /dev/null > /dev/null 2>&1"
+      interval: 15s
+      timeout: 3s
+      start_period: 20s
